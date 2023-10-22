@@ -1,6 +1,6 @@
 nextflow.enable.dsl=2
 
-workDir = '/home/kam071/DEAnalysis/Latra/work/'
+workDir = '/home/kam071/DEAnalysis/Latra/'
 
 process fastQC {
 	conda 'fastqc'
@@ -69,6 +69,60 @@ process kraken {
 	"""
 }
 
+process table_gen {
+	executor 'slurm'
+	cpus 1
+	memory '4 GB'
+	queue 'short'
+
+	output:
+	path("done.txt")
+
+	script:
+	"""
+		python /home/kam071/DEAnalysis/Latra/table_generator.py
+		echo done > done.txt
+	"""
+}
+
+process find_pair {
+	executor 'slurm'
+	cpus 1
+	memory '4 GB'
+	queue 'short'
+
+	input:
+	path(done)
+
+	output:
+	path("done.txt")
+
+	script:
+	"""
+		python /home/kam071/DEAnalysis/Latra/find_pair.py
+		echo done > done.txt
+	"""
+}
+
+left = file('/home/kam071/DEAnalysis/Latra/left_kraken.txt')
+right = file('/home/kam071/DEAnalysis/Latra/right_kraken.txt')
+
+process trinity {
+	
+	executor 'slurm'
+	cpus 4
+	memory '64 GB'
+	queue 'medium'
+
+	input:
+	path(done)
+
+	script:
+	"""
+		singularity exec /software/singularity-containers/2021-10-21-trinityrnaseq.v2.13.2.simg Trinity --seqType fq --left $left.text --right $right.text --max_memory 64G --CPU 8 --output trinity_files --full_cleanup
+	"""
+}
+
 workflow trimmo {
 	take: 
 		rawReads
@@ -91,10 +145,13 @@ workflow kraken2 {
 
 workflow {
 	//rawReads = Channel.fromFilePairs('/home/sel025/LowerLab/2021_09_29_Svistunov_V_Latra_ant_BL_transcriptome_novogene/usftp21.novogene.com/raw_data/Pcorr*/Pcorr*_{1,2}.fq.gz', checkIfExists: true)
-	trim = Channel.fromFilePairs('/home/kam071/DEAnalysis/Latra/trimmo_files/*_{1,2}_paired.fq', checkIfExists: true)
-	kraken(trim)
-	fastQC(kraken.out)
+	//trim = Channel.fromFilePairs('/home/kam071/DEAnalysis/Latra/trimmo_files/*_{1,2}_paired.fq', checkIfExists: true)
+	//kraken(trim)
+	//fastQC(kraken.out)
 	//trimmo(rawReads)
 	//kraken2(trimmo.out)
 	//fastQC(kraken2.out)
+	table_gen()
+	find_pair(table_gen.out)
+	trinity(find_pair.out)
 }
