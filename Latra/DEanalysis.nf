@@ -114,6 +114,8 @@ process trinity {
 	memory '64 GB'
 	queue 'medium'
 
+	publishDir "trinity_files", mode: 'copy'
+
 	input:
 	path(done)
 

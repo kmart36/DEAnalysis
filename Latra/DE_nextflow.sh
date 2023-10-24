@@ -1,5 +1,5 @@
 #!/bin/bash 
-#SBATCH -p short # partition (queue) 
+#SBATCH -p medium # partition (queue) 
 #SBATCH -N 1 # (leave at 1 unless using multi-node specific code) 
 #SBATCH -n 1 # number of cores 
 #SBATCH --mem-per-cpu=16384 # memory per core 
