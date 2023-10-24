@@ -17,8 +17,6 @@ process fastQC {
 	"""
 }
 
-//Do we want to save unpaired? Or just paired?
-
 process trimmomatic {
 
 	publishDir "trimmo_files", mode: 'copy'
@@ -125,6 +123,24 @@ process trinity {
 	"""
 }
 
+process busco {
+
+	executor 'slurm'
+	cpus 1
+	memory '8 GB'
+
+	publishDir "busco_files", mode: 'move'
+
+	input:
+	path(trin)
+
+	script:
+	"""
+		cp -r /software/apps/augustus/current/config/ .
+		busco -i $trin -o ${trin.simpleName}.busco -l endopterygota_odb10 -m transcriptome -f
+	"""
+}
+
 workflow trimmo {
 	take: 
 		rawReads
@@ -153,7 +169,8 @@ workflow {
 	//trimmo(rawReads)
 	//kraken2(trimmo.out)
 	//fastQC(kraken2.out)
-	table_gen()
-	find_pair(table_gen.out)
-	trinity(find_pair.out)
+	//table_gen()
+	//find_pair(table_gen.out)
+	//trinity(find_pair.out)
+	busco(Channel.fromPath("trinity_files/trinity_files.Trinity.fasta"))
 }

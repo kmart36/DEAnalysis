@@ -11,4 +11,5 @@
 
 module load qc
 module load kraken2
+module load assembly_assessment
 /home/kam071/nextflow run DEanalysis.nf -with-report -with-timeline
