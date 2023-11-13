@@ -8,10 +8,17 @@ path_to_kraken = "/home/kam071/DEAnalysis/Latra/kraken_files/"
 path = "/home/kam071/DEAnalysis/Latra/"
 
 # %%
-infected_left = glob.glob(path_to_kraken + '*_infected_1.fq')
-infected_right = glob.glob(path_to_kraken + '*_infected_2.fq')
-non_infe_left = glob.glob(path_to_kraken + '*_noninfected_1.fq')
-non_infe_right = glob.glob(path_to_kraken + '*_noninfected_2.fq')
+reads = pd.read_csv("latra_reads.csv", index_col=0)
+
+# %%
+infected = reads[reads.Treatment.str.contains('PBS')].Identification
+noninfected = ~reads[reads.Treatment.str.contains('PBS')].Identification
+
+# %%
+infected_left = [path_to_kraken + x + '_R1*' for x in infected]
+infected_right = [path_to_kraken + x + '_R2*' for x in infected]
+non_infe_left = [path_to_kraken + x + '_R1*' for x in noninfected]
+non_infe_right = [path_to_kraken + x + '_R2*' for x in noninfected]
 
 # %%
 infected_left = ','.join(infected_left)

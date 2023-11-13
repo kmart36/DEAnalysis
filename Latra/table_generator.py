@@ -4,12 +4,14 @@ import glob
 import numpy as np
 
 path = "/home/kam071/DEAnalysis/Latra/"
+metadata_file = 'latra_metadata.csv'
+resulting_table = 'latra_reads.csv'
 
 # %%
 # Change these paths so they locate the fastqc_data.txt in each of the fastqc folders generated. 
-raws_fastqc = glob.glob(path + 'fastqc_summaries/*_1_fastqc/fastqc_data.txt')
-trim_fastqc = glob.glob(path + 'fastqc_summaries/*_1_paired_fastqc/fastqc_data.txt')
-krak_fastqc = glob.glob(path + 'fastqc_files/*_R_2_fastqc/*.unclassified.out_fastqc/fastqc_data.txt')
+raws_fastqc = glob.glob(path + 'fastqc_files/*_R1_fastqc/*_R1_fastqc/fastqc_data.txt')
+trim_fastqc = glob.glob(path + 'fastqc_files/*_R1_paired_fastqc/*_R1_paired_fastqc/fastqc_data.txt')
+krak_fastqc = glob.glob(path + 'fastqc_files/*_R2_fastqc/*_R2_fastqc/fastqc_data.txt')
 
 # %%
 raws_fastqc = sorted(raws_fastqc, key=str.lower)
@@ -18,8 +20,8 @@ krak_fastqc = sorted(krak_fastqc, key=str.lower)
 
 # %%
 # Change this path so it leads to where your fastqc files are stored, but do not change anything after the last /.
-ind = glob.glob(path + 'fastqc_summaries/*_1_fastqc')
-ind = ['_'.join(x.split('/')[-1].split('_')[0:2]) for x in ind]
+ind = glob.glob(path + 'fastqc_files/*_1_fastqc')
+ind = ['_'.join(x.split('/')[-1].split('_')[0:1]) for x in ind]
 
 # %%
 raws = []
@@ -44,11 +46,10 @@ table = table.drop(["Pcorr585_BL", "Pcorr585_ant"])
 
 # %%
 # Make sure you point to the metadata file that includes tissue and locality.
-metadata = pd.read_csv(path + 'latra_metadata.csv')
-metadata = metadata.set_index(table.index)
-
-# %%
-new_tbl = pd.concat([metadata, table], axis=1)
-
-# %%
-new_tbl.to_csv(path + "Latra_reads.csv")
+if len(metadata_file) == 0:
+    table.to_csv(path + resulting_table)
+else:
+    metadata = pd.read_csv(path + metadata_file)
+    metadata = metadata.set_index(table.index)
+    new_tbl = pd.concat([metadata, table], axis=1)
+    new_tbl.to_csv(path + resulting_table)
