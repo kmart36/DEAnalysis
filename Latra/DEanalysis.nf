@@ -226,7 +226,7 @@ workflow {
 	trimmo(rawReads)
 	kraken2(trimmo.out)
 	fastQC(kraken2.out)
-	table_gen()
+	table_gen(fastQC.out)
 	find_pair(table_gen.out)
 	mode = 'infected'
 	trinity(find_pair.out)
