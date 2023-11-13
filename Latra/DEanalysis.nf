@@ -119,13 +119,15 @@ process find_pair {
 
 	script:
 	"""
-		python $pyPath/find_pair.py
+		python $pyPath/gen_infected.py
 		echo done > done.txt
 	"""
 }
 
-left = file(mainPath + '/left_kraken.txt')
-right = file(mainPath + '/right_kraken.txt')
+in_left = file(mainPath + '/left_infected_kraken.txt')
+in_right = file(mainPath + '/right_infected_kraken.txt')
+nonin_left = file(mainPath + '/left_noninfected_kraken.txt')
+nonin_right = file(mainPath + '/right_noninfected_kraken.txt')
 
 process trinity {
 	
@@ -139,16 +141,24 @@ process trinity {
 	input:
 	path(done)
 
+	output:
+	path("*.Trinity.fasta")
+
 	script:
-	"""
-		singularity exec /software/singularity-containers/2021-10-21-trinityrnaseq.v2.13.2.simg Trinity --seqType fq --left $left.text --right $right.text --max_memory 64G --CPU 8 --output trinity_files --full_cleanup
-	"""
+	if (mode == 'infected')
+		"""
+			singularity exec /software/singularity-containers/2021-10-21-trinityrnaseq.v2.13.2.simg Trinity --seqType fq --left $in_left.text --right $in_right.text --max_memory 64G --CPU 8 --output trinity_files --full_cleanup
+		"""
+	else if (mode == 'noninfected')
+		"""
+			singularity exec /software/singularity-containers/2021-10-21-trinityrnaseq.v2.13.2.simg Trinity --seqType fq --left $nonin_left.text --right $nonin_right.text --max_memory 64G --CPU 8 --output trinity_files --full_cleanup
+		"""
 }
 
 process busco {
 
 	executor 'slurm'
-	cpus 1
+	cpus 2
 	memory '8 GB'
 
 	publishDir "busco_files", mode: 'move'
@@ -160,6 +170,35 @@ process busco {
 	"""
 		cp -r /software/apps/augustus/current/config/ .
 		busco -i $trin -o ${trin.simpleName}.busco -l endopterygota_odb10 -m transcriptome -f
+	"""
+}
+
+process cdhit {
+
+	executor 'slurm'
+	cpus 8
+	memory '64 GB'
+
+	input:
+	path(trin)
+
+	script:
+	"""
+		cd-hit-est -i $trin -o $mainPath/trinity.cd-hit.results -c 0.90 -n 8
+	"""
+}
+
+process salmon {
+
+	executor 'slurm'
+	cpus 8
+	memory '64 GB'
+
+	script:
+	"""
+		salmon quant -i /home/ssp008/Salmon_062022/Ppyra_index -l A -1 ${ROOTNAME}_R_1.unclassified.out.fq \
+    -2 ${ROOTNAME}_R_2.unclassified.out.fq --validateMappings -p 16 \
+    -o ${ROOTNAME}_transcript_quant
 	"""
 }
 
@@ -184,14 +223,15 @@ workflow kraken2 {
 }
 
 workflow {
-	//trim = Channel.fromFilePairs('/home/kam071/DEAnalysis/Latra/trimmo_files/*_{1,2}_paired.fq', checkIfExists: true)
-	//kraken(trim)
-	//fastQC(kraken.out)
 	trimmo(rawReads)
 	kraken2(trimmo.out)
 	fastQC(kraken2.out)
 	table_gen()
 	find_pair(table_gen.out)
+	mode = 'infected'
+	trinity(find_pair.out)
+	mode = 'noninfected'
 	trinity(find_pair.out)
 	busco(trinity.out)
+	cdhit(trinity.out)
 }
