@@ -222,6 +222,15 @@ workflow kraken2 {
 		kraken.out
 }
 
+workflow trin {
+	take:
+		done
+	main:
+		trinity(done)
+	emit:
+		trinity.out
+}
+
 workflow {
 	trimmo(rawReads)
 	kraken2(trimmo.out)
@@ -229,7 +238,7 @@ workflow {
 	table_gen(fastQC.out)
 	find_pair(table_gen.out)
 	mode = 'infected'
-	trinity(find_pair.out)
+	trin(find_pair.out)
 	mode = 'noninfected'
 	trinity(find_pair.out)
 	busco(trinity.out)
