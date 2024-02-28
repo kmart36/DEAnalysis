@@ -8,7 +8,7 @@ path_to_kraken = "/home/kam071/DEAnalysis/Latra/kraken_files/"
 path = "/home/kam071/DEAnalysis/Latra/"
 
 # %%
-reads = pd.read_csv(path + "Latra_reads.csv", index_col=0)
+reads = pd.read_csv(path + "latra_reads.csv", index_col=0)
 
 # %%
 males = reads[reads.Sex == "M"].sort_values(by=["After Kraken"], ascending=False)

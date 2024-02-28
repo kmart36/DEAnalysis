@@ -9,9 +9,9 @@ resulting_table = 'latra_reads.csv'
 
 # %%
 # Change these paths so they locate the fastqc_data.txt in each of the fastqc folders generated. 
-raws_fastqc = glob.glob(path + 'fastqc_files/*_R1_fastqc/*_R1_fastqc/fastqc_data.txt')
-trim_fastqc = glob.glob(path + 'fastqc_files/*_R1_paired_fastqc/*_R1_paired_fastqc/fastqc_data.txt')
-krak_fastqc = glob.glob(path + 'fastqc_files/*_R2_fastqc/*_R2_fastqc/fastqc_data.txt')
+raws_fastqc = glob.glob(path + 'fastqc_files/*_1.fq_fastqc/*_1_fastqc/fastqc_data.txt')
+trim_fastqc = glob.glob(path + 'fastqc_files/*_1_paired_fastqc/*_1_paired_fastqc/fastqc_data.txt')
+krak_fastqc = glob.glob(path + 'fastqc_files/*_R_2.unclassified.out_fastqc/*_R_2.unclassified.out_fastqc/fastqc_data.txt')
 
 # %%
 raws_fastqc = sorted(raws_fastqc, key=str.lower)
@@ -20,8 +20,9 @@ krak_fastqc = sorted(krak_fastqc, key=str.lower)
 
 # %%
 # Change this path so it leads to where your fastqc files are stored, but do not change anything after the last /.
-ind = glob.glob(path + 'fastqc_files/*_1_fastqc')
-ind = ['_'.join(x.split('/')[-1].split('_')[0:1]) for x in ind]
+ind = glob.glob(path + 'fastqc_files/*_1.fq_fastqc')
+ind = ['_'.join(x.split('/')[-1].split('_')[0:2]) for x in ind]
+ind = sorted(ind, key=str.lower)
 
 # %%
 raws = []

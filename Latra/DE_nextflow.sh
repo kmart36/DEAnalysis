@@ -12,4 +12,6 @@
 module load qc
 module load kraken2
 module load assembly_assessment
-/home/kam071/nextflow run DEanalysis.nf -with-report -with-timeline
+module load ncbi-blast
+conda activate cd-hit
+/home/kam071/nextflow run DEanalysis.nf -with-report -with-timeline -with-dag

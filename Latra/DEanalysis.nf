@@ -15,11 +15,12 @@ pyPath = '/home/kam071/DEAnalysis/Latra'
 // matches the format of your files (slash at the beginning, no slash at the end).
 rawDataPath = '/home/sel025/LowerLab/2021_09_29_Svistunov_V_Latra_ant_BL_transcriptome_novogene/usftp21.novogene.com/raw_data/Pcorr*'
 rawReads = Channel.fromFilePairs(rawDataPath + '/*_{1,2}.fq.gz', checkIfExists: true)
+latra_query = '/home/kam071/DEAnalysis/Latra/query_ORs_V3.faa'
 
 process fastQC {
 	conda 'fastqc'
 	executor 'slurm'
-	memory '8 GB'
+	memory '4 GB'
 
 	input:
 	tuple val(sample_id), path(sample)
@@ -29,8 +30,8 @@ process fastQC {
 
 	script:
 	"""
-		mkdir -p $mainPath/fastqc_files/${sample[0].simpleName}_fastqc
-		fastqc --outdir $mainPath/fastqc_files/${sample[0].simpleName}_fastqc ${sample[0]} --extract
+		mkdir -p $mainPath/fastqc_files/${sample[0].baseName}_fastqc
+		fastqc --outdir $mainPath/fastqc_files/${sample[0].baseName}_fastqc ${sample[0]} --extract
 
 		echo done > done.txt
 	"""
@@ -41,7 +42,7 @@ process trimmomatic {
 	publishDir "trimmo_files", mode: 'copy'
 
 	cpus 4
-	memory '8 GB'
+	memory '4 GB'
 	executor 'slurm'
 
     input:
@@ -89,14 +90,14 @@ process kraken {
 process table_gen {
 	executor 'slurm'
 	cpus 1
-	memory '4 GB'
+	memory '1 GB'
 	queue 'short'
 
 	input:
 	path(done)
 
 	output:
-	path("done.txt")
+	path("kraken_done.txt")
 
 	script:
 	"""
@@ -108,7 +109,7 @@ process table_gen {
 process find_pair {
 	executor 'slurm'
 	cpus 1
-	memory '4 GB'
+	memory '1 GB'
 	queue 'short'
 
 	input:
@@ -119,20 +120,19 @@ process find_pair {
 
 	script:
 	"""
-		python $pyPath/gen_infected.py
+		python $pyPath/find_pair.py
 		echo done > done.txt
 	"""
 }
 
-in_left = file(mainPath + '/left_infected_kraken.txt')
-in_right = file(mainPath + '/right_infected_kraken.txt')
-nonin_left = file(mainPath + '/left_noninfected_kraken.txt')
-nonin_right = file(mainPath + '/right_noninfected_kraken.txt')
+mode = 'norm'
+left = file(mainPath + '/left_kraken.txt')
+right = file(mainPath + '/right_kraken.txt')
 
 process trinity {
 	
 	executor 'slurm'
-	cpus 4
+	cpus 6
 	memory '64 GB'
 	queue 'medium'
 
@@ -152,6 +152,11 @@ process trinity {
 	else if (mode == 'noninfected')
 		"""
 			singularity exec /software/singularity-containers/2021-10-21-trinityrnaseq.v2.13.2.simg Trinity --seqType fq --left $nonin_left.text --right $nonin_right.text --max_memory 64G --CPU 8 --output trinity_files --full_cleanup
+		"""
+	else
+		"""
+			singularity exec /software/singularity-containers/2021-10-21-trinityrnaseq.v2.13.2.simg Trinity --seqType fq --left $left.text --right $right.text --max_memory 64G --CPU 8 --output trinity_files --full_cleanup
+
 		"""
 }
 
@@ -182,6 +187,9 @@ process cdhit {
 	input:
 	path(trin)
 
+	output:
+	path("trinity.cd-hit.results*")
+
 	script:
 	"""
 		cd-hit-est -i $trin -o $mainPath/trinity.cd-hit.results -c 0.90 -n 8
@@ -196,11 +204,38 @@ process salmon {
 
 	script:
 	"""
-		salmon quant -i /home/ssp008/Salmon_062022/Ppyra_index -l A -1 ${ROOTNAME}_R_1.unclassified.out.fq \
-    -2 ${ROOTNAME}_R_2.unclassified.out.fq --validateMappings -p 16 \
-    -o ${ROOTNAME}_transcript_quant
 	"""
 }
+
+process blast_db {
+
+	executor 'slurm'
+	cpus 2
+	memory '16 GB'
+
+	input:
+	path(cd_hit)
+
+	output:
+	path("Latr_db1*")
+
+	script:
+	"""
+		makeblastdb -in $cd_hit -out Latr_db1 -dbtype nucl
+	"""
+}
+
+process blast {
+
+	input:
+	path(db_1)
+
+	script:
+	"""
+		blastp -query $latra_query -db $db_1 -out Latr_blast1_hits.faa -evalue 1 -outfmt 7
+	"""
+}
+
 
 workflow trimmo {
 	take: 
@@ -231,16 +266,7 @@ workflow trin {
 		trinity.out
 }
 
+
 workflow {
-	trimmo(rawReads)
-	kraken2(trimmo.out)
-	fastQC(kraken2.out)
-	table_gen(fastQC.out)
-	find_pair(table_gen.out)
-	mode = 'infected'
-	trin(find_pair.out)
-	mode = 'noninfected'
-	trinity(find_pair.out)
-	busco(trinity.out)
-	cdhit(trinity.out)
+	trimmo(rawReads) | kraken2 | fastQC | collectFile(name: 'kraken_done.txt', newLine: true) | table_gen | find_pair | trinity | cdhit | blast_db | blast
 }
