@@ -1,0 +1,1 @@
+/home/kam071/DEAnalysis/Latra/kraken_files/Pcorr726_ant_R_2.unclassified.out.fq,/home/kam071/DEAnalysis/Latra/kraken_files/Pcorr726_BL_R_2.unclassified.out.fq,/home/kam071/DEAnalysis/Latra/kraken_files/Pcorr732_ant_R_2.unclassified.out.fq,/home/kam071/DEAnalysis/Latra/kraken_files/Pcorr732_BL_R_2.unclassified.out.fq
