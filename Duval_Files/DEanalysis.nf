@@ -39,7 +39,7 @@ process fastQC {
 
 process trimmomatic {
 
-	publishDir "trimmo_files", mode: 'copy'
+	//publishDir "trimmo_files", mode: 'copy'
 
 	cpus 4
 	memory '4 GB'
@@ -61,7 +61,7 @@ process trimmomatic {
 
 process kraken {
 	
-	publishDir "kraken_files", mode: 'copy'
+	//publishDir "kraken_files", mode: 'copy'
 
 	executor 'slurm'
 	cpus 4
@@ -84,6 +84,8 @@ process kraken {
         --report ${sample_id}.kraken.report \
         ${kraken[0]} \
         ${kraken[1]}
+		rm -rf ${kraken[0]}
+		rm -rf ${kraken[1]}
 	"""
 }
 
@@ -299,8 +301,16 @@ workflow trin {
 }
 
 
-workflow {
+workflow normal {
 	//trimmo(rawReads) | kraken2 | fastQC | collectFile(name: 'kraken_done.txt', newLine: true) | table_gen | find_pair | trinity | cdhit | 
 	//blast_db(Channel.fromPath('/home/kam071/DEAnalysis/Latra/trinity.cd-hit.results')) | blast
 	trimmo(rawReads) | kraken2 | fastQC | collectFile(name: 'kraken_done.txt', newLine: true) | gen_infected | trin | busco
+}
+
+workflow space_saver {
+	trimmomatic(rawReads) | kraken | collectFile(name: 'kraken_done.txt', newLine: true) | gen_infected | trin
+}
+
+workflow {
+	space_saver
 }
