@@ -152,7 +152,7 @@ in_right = file(mainPath + '/right_infected_kraken.txt')
 nonin_left = file(mainPath + '/left_noninfected_kraken.txt')
 nonin_right = file(mainPath + '/right_noninfected_kraken.txt')
 
-process trinity {
+process trinity_1 {
 	
 	executor 'slurm'
 	cpus 6
@@ -168,19 +168,30 @@ process trinity {
 	path("*.Trinity.fasta")
 
 	script:
-	if (mode == 'infected')
-		"""
-			singularity exec /software/singularity-containers/2021-10-21-trinityrnaseq.v2.13.2.simg Trinity --seqType fq --left $in_left.text --right $in_right.text --max_memory 64G --CPU 8 --output trinity_files_infected --full_cleanup
-		"""
-	else if (mode == 'noninfected')
-		"""
-			singularity exec /software/singularity-containers/2021-10-21-trinityrnaseq.v2.13.2.simg Trinity --seqType fq --left $nonin_left.text --right $nonin_right.text --max_memory 64G --CPU 8 --output trinity_files_noninfected --full_cleanup
-		"""
-	else
-		"""
-			singularity exec /software/singularity-containers/2021-10-21-trinityrnaseq.v2.13.2.simg Trinity --seqType fq --left $left.text --right $right.text --max_memory 64G --CPU 8 --output trinity_files --full_cleanup
+	"""
+		singularity exec /software/singularity-containers/2021-10-21-trinityrnaseq.v2.13.2.simg Trinity --seqType fq --left $in_left.text --right $in_right.text --max_memory 64G --CPU 8 --output trinity_files_infected --full_cleanup
+	"""
+}
 
-		"""
+process trinity_2 {
+	
+	executor 'slurm'
+	cpus 6
+	memory '64 GB'
+	queue 'medium'
+
+	publishDir "trinity_files", mode: 'copy'
+
+	input:
+	path(done)
+
+	output:
+	path("*.Trinity.fasta")
+
+	script:
+	"""
+		singularity exec /software/singularity-containers/2021-10-21-trinityrnaseq.v2.13.2.simg Trinity --seqType fq --left $nonin_left.text --right $nonin_right.text --max_memory 64G --CPU 8 --output trinity_files_noninfected --full_cleanup
+	"""
 }
 
 process busco {
@@ -292,10 +303,8 @@ workflow trin {
 	take:
 		done
 	main:
-		mode = 'infected'
-		trinity(done)
-		mode = 'noninfected'
-		trinity(done)
+		trinity_1(done)
+		trinity_2(done)
 	emit:
 		trinity.out
 }
